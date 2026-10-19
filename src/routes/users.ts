@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import type { AppEnv } from "../lib/prisma";
+import { isRequestedUserOrAdmin, requireAdmin } from "../lib/auth";
+
 
 const users = new Hono<AppEnv>();
 
@@ -22,7 +24,7 @@ const userSchema = z.object({
 
 const updateUserSchema = userSchema.partial(); //reuses scheme but makes every field optional, to allow updating just one variable.
 
-users.post("/users", zValidator("json", userSchema), async (c) => {
+users.post("/users", requireAdmin, zValidator("json", userSchema), async (c) => {
   const prisma = c.get("prisma");
   const data = c.req.valid("json");
 
@@ -38,7 +40,17 @@ const userIdParam = z.object({
   userId: z.coerce.number().int(),
 });
 
-users.get("/users/:userId", zValidator("param", userIdParam), async (c) => {
+//Any authenticated user can read their own profile
+users.get("/profile", async (c) => {
+    const prisma = c.get("prisma");
+    const {userId} = c.get("credentials");
+    const user = await prisma.user.findUnique({where: {id: userId}});
+    return c.json(user,200);
+});
+
+
+
+users.get("/users/:userId", zValidator("param", userIdParam), isRequestedUserOrAdmin, async (c) => {
   const prisma = c.get("prisma");
   const { userId } = c.req.valid("param");
 
@@ -52,7 +64,7 @@ users.get("/users/:userId", zValidator("param", userIdParam), async (c) => {
 
 users.put(
   "/users/:userId",
-  zValidator("param", userIdParam),
+  zValidator("param", userIdParam), isRequestedUserOrAdmin,
   zValidator("json", updateUserSchema),
   async (c) => {
     const prisma = c.get("prisma");

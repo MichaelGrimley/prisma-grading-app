@@ -14,6 +14,7 @@ export const prisma = new PrismaClient({ adapter });
 export type AppEnv = {
   Variables: {
     prisma: PrismaClient;
+    credentials: AuthCredentials;
   };
 };
 
@@ -23,3 +24,10 @@ export function withPrisma(c: Context<AppEnv>, next: Next) {
   }
   return next();
 }
+
+export type AuthCredentials = {
+    tokenId: number;
+    userId: number;
+    isAdmin: boolean;
+    teacherOf: number[];
+};
