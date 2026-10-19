@@ -2,7 +2,12 @@ import {sign, verify} from "hono/jwt";
 import type {Context, Next} from "hono";
 import type {AppEnv} from "./prisma";
 
-const JWT_SECRET = process.env.JWT_SECRET || "SUPER_SECRET_JWT_SECRET";
+const JWT_SECRET = process.env.JWT_SECRET
+
+if(!JWT_SECRET){
+    throw new Error("JWT_SECRET environment variable is required")
+};
+
 const JWT_ALGORITHM = "HS256" as const;
 
 const EMAIL_TOKEN_EXPIRATION_MINUTES = 10;
@@ -21,7 +26,7 @@ export function generateEmailToken(): string {
 
 //Sign a JWT that references the API token stored in the database.
 export function generateAuthToken(tokenId: number): Promise<string>{
-    return sign({tokenId}, JWT_SECRET, JWT_ALGORITHM);
+    return sign({tokenId}, JWT_SECRET!, JWT_ALGORITHM);
 }
 
 //Runs on every protected request: verifies the JWT, checks the referenced
@@ -36,7 +41,7 @@ const token = authHeader.replace(/^Bearer\s+/i, "");
 
 let payload;
 try{
-    payload = await verify(token, JWT_SECRET, JWT_ALGORITHM);
+    payload = await verify(token, JWT_SECRET!, JWT_ALGORITHM);
 }catch{
     return c.json({error: "invalid token"}, 401);
 }
